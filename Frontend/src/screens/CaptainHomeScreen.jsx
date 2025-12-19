@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState, useRef } from "react";
 import map from "/map.png";
 import axios from "axios";
 import { useCaptain } from "../contexts/CaptainContext";
@@ -8,6 +8,7 @@ import { NewRide, Sidebar } from "../components";
 import Console from "../utils/console";
 import { useAlert } from "../hooks/useAlert";
 import { Alert } from "../components";
+import throttle from "lodash.throttle";
 
 const defaultRideData = {
   user: {
@@ -73,6 +74,10 @@ function CaptainHomeScreen() {
     JSON.parse(localStorage.getItem("showBtn")) || "accept"
   );
 
+  // Location watch ID ref
+  const watchIdRef = useRef(null);
+  const isTrackingRef = useRef(false);
+
   const acceptRide = async () => {
     try {
       if (newRide._id != "") {
@@ -92,6 +97,13 @@ function CaptainHomeScreen() {
           `https://www.google.com/maps?q=${riderLocation.ltd},${riderLocation.lng} to ${newRide.pickup}&output=embed`
         );
         Console.log(response);
+
+        // Start tracking when ride is accepted
+        startLocationTracking();
+        socket.emit("captain:start-tracking", {
+          captainId: captain._id,
+          rideId: newRide._id
+        });
       }
     } catch (error) {
       setLoading(false);
@@ -154,6 +166,13 @@ function CaptainHomeScreen() {
         setNewRide(defaultRideData);
         localStorage.removeItem("rideDetails");
         localStorage.removeItem("showPanel");
+
+        // Stop tracking when ride ends
+        stopLocationTracking();
+        socket.emit("captain:stop-tracking", {
+          captainId: captain._id,
+          rideId: newRide._id
+        });
       }
     } catch (err) {
       setLoading(false);
@@ -161,11 +180,30 @@ function CaptainHomeScreen() {
     }
   };
 
+  // Throttled location update to avoid too many socket emissions
+  const throttledLocationUpdate = useRef(
+    throttle((captainId, location, rideId = null) => {
+      socket.emit("captain:location-update", {
+        captainId,
+        location,
+        rideId
+      });
+    }, 3000) // Update every 3 seconds
+  ).current;
+
   const updateLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           // Console.log(position);
+          const location = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+            heading: position.coords.heading,
+            speed: position.coords.speed
+          };
+
           setRiderLocation({
             ltd: position.coords.latitude,
             lng: position.coords.longitude,
@@ -174,6 +212,8 @@ function CaptainHomeScreen() {
           setMapLocation(
             `https://www.google.com/maps?q=${position.coords.latitude},${position.coords.longitude}&output=embed`
           );
+
+          // Use old socket event for backward compatibility
           socket.emit("update-location-captain", {
             userId: captain._id,
             location: {
@@ -181,12 +221,17 @@ function CaptainHomeScreen() {
               lng: position.coords.longitude,
             },
           });
+
+          // Use new enhanced location update with throttling
+          if (isTrackingRef.current && newRide._id) {
+            throttledLocationUpdate(captain._id, location, newRide._id);
+          }
         },
         (error) => {
           console.error("Error fetching position:", error);
           switch (error.code) {
             case error.PERMISSION_DENIED:
-              console.error("User denied the request for Geolocation.");
+              showAlert('Permisos Requeridos', 'Por favor habilita los permisos de ubicación', 'warning');
               break;
             case error.POSITION_UNAVAILABLE:
               console.error("Location information is unavailable.");
@@ -197,8 +242,83 @@ function CaptainHomeScreen() {
             default:
               console.error("An unknown error occurred.");
           }
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
         }
       );
+    }
+  };
+
+  // Start continuous location tracking
+  const startLocationTracking = () => {
+    if (!navigator.geolocation) {
+      showAlert('Error', 'Geolocalización no soportada', 'failure');
+      return;
+    }
+
+    // Clear any existing watch
+    if (watchIdRef.current) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+    }
+
+    isTrackingRef.current = true;
+    
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        const location = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          heading: position.coords.heading,
+          speed: position.coords.speed
+        };
+
+        setRiderLocation({
+          ltd: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+
+        // Update map location
+        if (newRide._id) {
+          setMapLocation(
+            `https://www.google.com/maps?q=${position.coords.latitude},${position.coords.longitude} to ${newRide.pickup || newRide.destination}&output=embed`
+          );
+        }
+
+        // Emit location update
+        socket.emit("update-location-captain", {
+          userId: captain._id,
+          location: {
+            ltd: position.coords.latitude,
+            lng: position.coords.longitude,
+          },
+        });
+
+        // Enhanced location update with throttling
+        if (newRide._id) {
+          throttledLocationUpdate(captain._id, location, newRide._id);
+        }
+      },
+      (error) => {
+        console.error('Error watching position:', error);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0
+      }
+    );
+  };
+
+  // Stop location tracking
+  const stopLocationTracking = () => {
+    isTrackingRef.current = false;
+    if (watchIdRef.current) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
     }
   };
 
@@ -234,7 +354,12 @@ function CaptainHomeScreen() {
       Console.log("Ride cancelled", data);
       updateLocation();
       clearRideData();
+      stopLocationTracking();
     });
+
+    return () => {
+      stopLocationTracking();
+    };
   }, [captain]);
 
   useEffect(() => {
