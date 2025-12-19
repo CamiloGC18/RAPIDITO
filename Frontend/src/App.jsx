@@ -14,9 +14,6 @@ import {
   CaptainEditProfile,
   Error,
   ChatScreen,
-  VerifyEmail,
-  ResetPassword,
-  ForgotPassword
 } from "./screens/";
 import { logger } from "./utils/logger";
 import { SocketDataContext } from "./contexts/SocketContext";
@@ -101,9 +98,6 @@ function App() {
               }
             />
             <Route path="/:userType/chat/:rideId" element={<ChatScreen />} />
-            <Route path="/:userType/verify-email/" element={<VerifyEmail />} />
-            <Route path="/:userType/forgot-password/" element={<ForgotPassword />} />
-            <Route path="/:userType/reset-password/" element={<ResetPassword />} />
 
             <Route path="*" element={<Error />} />
           </Routes>

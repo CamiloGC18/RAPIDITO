@@ -9,6 +9,7 @@ import SelectVehicle from "./SelectVehicle";
 import Spinner from "./Spinner";
 import Sidebar from "./Sidebar";
 import VerifyEmail from "./VerifyEmail";
+import GoogleAuthButton from "./GoogleAuthButton";
 
 export {
   Alert,
@@ -22,4 +23,5 @@ export {
   Sidebar,
   Spinner,
   VerifyEmail,
+  GoogleAuthButton,
 };

@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
 const userSchema = new mongoose.Schema(
@@ -49,18 +48,14 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-userSchema.statics.hashPassword = async function (password) {
-  return await bcrypt.hash(password, 10);
-};
-
+// Keep generateAuthToken for OAuth compatibility
 userSchema.methods.generateAuthToken = function () {
   return jwt.sign({ id: this._id, userType: "user" }, process.env.JWT_SECRET, {
     expiresIn: "24h",
   });
 };
 
-userSchema.methods.comparePassword = async function (password) {
-  return await bcrypt.compare(password, this.password);
-};
+// DEPRECATED: Password methods removed for OAuth-only authentication
+// hashPassword and comparePassword are no longer needed
 
 module.exports = mongoose.model("User", userSchema);

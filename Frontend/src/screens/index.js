@@ -19,9 +19,6 @@ import CaptainEditProfile from "./CaptainEditProfile";
 
 import Error from "./Error";
 import ChatScreen from "./ChatScreen";
-import VerifyEmail from "./VerifyEmail";
-import ResetPassword from "./ResetPassword";
-import ForgotPassword from "./ForgotPassword";
 
 export {
   GetStarted,
@@ -38,7 +35,4 @@ export {
   CaptainEditProfile,
   Error,
   ChatScreen,
-  VerifyEmail,
-  ResetPassword,
-  ForgotPassword
 };
