@@ -1,100 +1,117 @@
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
-import { Button, Heading, Input } from "../components";
-import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import { Button, Heading, GoogleAuthButton } from "../components";
+import { jwtDecode } from "jwt-decode";
 import Console from "../utils/console";
 
 function CaptainLogin() {
   const [responseError, setResponseError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const {
-    handleSubmit,
-    register,
-    formState: { errors },
-  } = useForm();
-
-  const navigation = useNavigate();
-
-  const loginCaptain = async (data) => {
-    if (data.email.trim() !== "" && data.password.trim() !== "") {
-      try {
-        setLoading(true)
-        const response = await axios.post(
-          `${import.meta.env.VITE_SERVER_URL}/captain/login`,
-          data
-        );
-        Console.log(response);
-        localStorage.setItem("token", response.data.token);
-        localStorage.setItem("userData", JSON.stringify({
-          type: "captain",
-          data: response.data.captain,
-        }));
-        navigation("/captain/home");
-      } catch (error) {
-        setResponseError(error.response.data.message);
-        Console.log(error);
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
+  const [subscriptionWarning, setSubscriptionWarning] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    setTimeout(() => {
-      setResponseError("");
-    }, 5000);
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    const error = params.get("error");
+    const subscriptionStatus = params.get("subscriptionStatus");
+
+    if (error) {
+      setResponseError("Error al iniciar sesión con Google. Intenta nuevamente.");
+      // Clean URL
+      window.history.replaceState({}, document.title, "/captain/login");
+      return;
+    }
+
+    if (token) {
+      setLoading(true);
+      try {
+        const decoded = jwtDecode(token);
+        localStorage.setItem("token", token);
+        localStorage.setItem("userData", JSON.stringify({
+          type: "captain",
+          data: decoded
+        }));
+        Console.log("Captain logged in successfully:", decoded);
+
+        // Check subscription status
+        if (subscriptionStatus === "inactive" || subscriptionStatus === "expired") {
+          setSubscriptionWarning(true);
+        }
+
+        navigate("/captain/home");
+      } catch (error) {
+        setResponseError("Token inválido. Intenta nuevamente.");
+        Console.log("Token decode error:", error);
+      } finally {
+        setLoading(false);
+        // Clean URL
+        window.history.replaceState({}, document.title, "/captain/login");
+      }
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    if (responseError) {
+      const timer = setTimeout(() => {
+        setResponseError("");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
   }, [responseError]);
+
   return (
     <div className="w-full h-dvh flex flex-col justify-between p-4 pt-6">
       <div>
-        <Heading title={"Captain Login🚕"} />
-        <form onSubmit={handleSubmit(loginCaptain)}>
-          <Input
-            label={"Email"}
-            type={"email"}
-            name={"email"}
-            register={register}
-            error={errors.email}
-          />
-          <Input
-            label={"Password"}
-            type={"password"}
-            name={"password"}
-            register={register}
-            error={errors.password}
-          />
-          {responseError && (
-            <p className="text-sm text-center mb-4 text-red-500">
-              {responseError}
-            </p>
-          )}
-          <Link to="/captain/forgot-password" className="text-sm mb-2 inline-block">
-            Forgot Password?
-          </Link>
-          <Button title={"Login"} loading={loading} type="submit" />
-        </form>
-        <p className="text-sm font-normal text-center mt-4">
-          Don't have an account?{" "}
-          <Link to={"/captain/signup"} className="font-semibold">
-            Sign up
-          </Link>
+        <Heading title={"Bienvenido Capitán 🚕"} />
+        <p className="text-gray-600 text-center mb-8 text-sm">
+          Inicia sesión con tu cuenta de Google
         </p>
 
+        {loading ? (
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+          </div>
+        ) : (
+          <>
+            <GoogleAuthButton userType="captain" classes="mb-4" />
+
+            {responseError && (
+              <p className="text-sm text-center mt-4 text-red-500">
+                {responseError}
+              </p>
+            )}
+
+            {subscriptionWarning && (
+              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
+                <p className="text-sm text-yellow-800 text-center">
+                  ⚠️ Tu suscripción está inactiva. Actívala para empezar a aceptar viajes.
+                </p>
+              </div>
+            )}
+
+            <p className="text-sm font-normal text-center mt-6 text-gray-600">
+              ¿No tienes cuenta?{" "}
+              <a href="/captain/signup" className="font-semibold text-orange-600 hover:underline">
+                Regístrate aquí
+              </a>
+            </p>
+          </>
+        )}
       </div>
+
       <div>
         <Button
           type={"link"}
           path={"/login"}
-          title={"Login as User"}
+          title={"Iniciar sesión como Usuario"}
           classes={"bg-green-500"}
         />
         <p className="text-xs font-normal text-center self-end mt-6">
-          This site is protected by reCAPTCHA and the Google{" "}
-          <span className="font-semibold underline">Privacy Policy</span> and{" "}
-          <span className="font-semibold underline">Terms of Service</span>{" "}
-          apply.
+          Este sitio está protegido por reCAPTCHA y aplican la{" "}
+          <span className="font-semibold underline">Política de Privacidad</span> y los{" "}
+          <span className="font-semibold underline">Términos de Servicio</span>{" "}
+          de Google.
         </p>
       </div>
     </div>

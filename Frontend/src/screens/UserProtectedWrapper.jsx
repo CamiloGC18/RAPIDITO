@@ -2,16 +2,14 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../contexts/UserContext";
-import VerifyEmail from "../components/VerifyEmail";
 import Loading from "./Loading";
 
 function UserProtectedWrapper({ children }) {
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
-  const { user, setUser } = useUser();
+  const { user, setUser, setProfilePicture } = useUser();
 
   const [loading, setLoading] = useState(true);
-  const [isVerified, setIsVerified] = useState(null);
 
   useEffect(() => {
     if (!token) {
@@ -34,7 +32,11 @@ function UserProtectedWrapper({ children }) {
             "userData",
             JSON.stringify({ type: "user", data: user })
           );
-          setIsVerified(user.emailVerified);
+          
+          // Set profile picture if available
+          if (user.profilePicture) {
+            setProfilePicture(user.profilePicture);
+          }
         }
       })
       .catch(() => {
@@ -45,16 +47,11 @@ function UserProtectedWrapper({ children }) {
       .finally(() => {
         setLoading(false);
       });
-  }, [token]);
+  }, [token, navigate, setUser, setProfilePicture]);
 
   if (loading) return <Loading />;
 
-  if (isVerified === false) {
-    return <VerifyEmail user={user} role={"user"} />;
-  }
-
   return <>{children}</>;
 }
-
 
 export default UserProtectedWrapper;
