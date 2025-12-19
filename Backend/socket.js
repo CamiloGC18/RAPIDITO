@@ -92,10 +92,14 @@ function initializeSocket(server) {
             });
             ride.tracking.lastLocationUpdate = new Date();
 
-            // Update ETA dynamically if we have destination
-            if (ride.destination && location.speed) {
-              const destination = ride.pickup; // Assuming captain is heading to pickup first
-              // In a real scenario, you'd determine if going to pickup or destination
+            // Determine if captain is heading to pickup or destination
+            let targetLocation = null;
+            if (ride.status === 'accepted' || ride.tracking.currentPhase === 'captain-arriving') {
+              // Captain is heading to pickup
+              targetLocation = ride.pickup;
+            } else if (ride.status === 'ongoing' || ride.tracking.currentPhase === 'in-progress') {
+              // Captain is heading to destination
+              targetLocation = ride.destination;
             }
 
             await ride.save();

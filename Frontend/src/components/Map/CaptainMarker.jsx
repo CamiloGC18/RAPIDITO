@@ -40,7 +40,7 @@ const CaptainMarker = ({
   }, [marker, heading]);
 
   const icon = {
-    path: window.google?.maps?.SymbolPath?.FORWARD_CLOSED_ARROW || 0,
+    path: window.google?.maps?.SymbolPath?.FORWARD_CLOSED_ARROW,
     scale: 6,
     fillColor: isMoving ? '#4CAF50' : '#FFA726',
     fillOpacity: 1,
@@ -48,6 +48,11 @@ const CaptainMarker = ({
     strokeWeight: 2,
     rotation: heading || 0
   };
+
+  // Only render if Google Maps is loaded
+  if (!window.google?.maps?.SymbolPath) {
+    return null;
+  }
 
   return (
     <Marker

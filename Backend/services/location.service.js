@@ -1,10 +1,11 @@
 const NodeCache = require('node-cache');
 const { getDistance, computeDestinationPoint, getRhumbLineBearing } = require('geolib');
 const captainModel = require('../models/captain.model');
+const { COORDINATE_BOUNDS, CACHE_TTL, SPEED } = require('../config/tracking.config');
 
 // Initialize cache with TTL
-const locationCache = new NodeCache({ stdTTL: 30, checkperiod: 10 });
-const nearbyCache = new NodeCache({ stdTTL: 10, checkperiod: 5 });
+const locationCache = new NodeCache({ stdTTL: CACHE_TTL.LOCATION, checkperiod: 10 });
+const nearbyCache = new NodeCache({ stdTTL: CACHE_TTL.NEARBY, checkperiod: 5 });
 
 /**
  * Update captain location with validation
@@ -154,14 +155,7 @@ function calculateETA(origin, destination, mode = 'driving') {
   try {
     const distance = calculateDistance(origin, destination);
     
-    // Average speeds in meters per minute
-    const speeds = {
-      driving: 500,  // ~30 km/h average in city
-      walking: 83,   // ~5 km/h
-      bike: 250      // ~15 km/h
-    };
-
-    const speed = speeds[mode] || speeds.driving;
+    const speed = SPEED[mode] || SPEED.DRIVING;
     const eta = Math.ceil(distance / speed);
 
     return eta;
@@ -197,9 +191,8 @@ function calculateDistance(origin, destination) {
  * @returns {boolean} Valid or not
  */
 function validateCoordinates(lat, lng) {
-  // Colombia-Venezuela region: lat [0°N - 13°N], lng [-78°W - -60°W]
-  const isValidLat = lat >= 0 && lat <= 13;
-  const isValidLng = lng >= -78 && lng <= -60;
+  const isValidLat = lat >= COORDINATE_BOUNDS.LAT_MIN && lat <= COORDINATE_BOUNDS.LAT_MAX;
+  const isValidLng = lng >= COORDINATE_BOUNDS.LNG_MIN && lng <= COORDINATE_BOUNDS.LNG_MAX;
   const isNumber = typeof lat === 'number' && typeof lng === 'number';
   const isNotNaN = !isNaN(lat) && !isNaN(lng);
 

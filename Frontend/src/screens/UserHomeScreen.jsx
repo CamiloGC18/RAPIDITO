@@ -413,13 +413,15 @@ function UserHomeScreen() {
           />
         </div>
       ) : (
-        <iframe
-          src={mapLocation}
-          className="absolute map w-full h-[120vh]"
-          allowFullScreen={true}
-          loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
-        ></iframe>
+        mapLocation && (
+          <iframe
+            src={mapLocation}
+            className="absolute map w-full h-[120vh]"
+            allowFullScreen={true}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          ></iframe>
+        )
       )}
       
       {/* Find a trip component */}

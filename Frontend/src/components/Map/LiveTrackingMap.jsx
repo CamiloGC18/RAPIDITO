@@ -36,6 +36,9 @@ const LiveTrackingMap = ({
 
   const mapCenter = captainLocation || userLocation || { lat: 8.7832, lng: -75.8845 };
 
+  // Check if Google Maps is loaded
+  const isGoogleMapsLoaded = window.google?.maps?.SymbolPath !== undefined;
+
   return (
     <div className="relative w-full h-full">
       <MapContainer
@@ -44,40 +47,44 @@ const LiveTrackingMap = ({
         onMapLoad={setMap}
         className="w-full h-full"
       >
-        {/* User location marker */}
-        {userLocation && (
-          <Marker
-            position={userLocation}
-            icon={{
-              path: window.google?.maps?.SymbolPath?.CIRCLE || 0,
-              scale: 8,
-              fillColor: '#4285F4',
-              fillOpacity: 1,
-              strokeColor: '#FFFFFF',
-              strokeWeight: 2
-            }}
-            title="Tu ubicación"
-          />
-        )}
+        {isGoogleMapsLoaded && (
+          <>
+            {/* User location marker */}
+            {userLocation && (
+              <Marker
+                position={userLocation}
+                icon={{
+                  path: window.google.maps.SymbolPath.CIRCLE,
+                  scale: 8,
+                  fillColor: '#4285F4',
+                  fillOpacity: 1,
+                  strokeColor: '#FFFFFF',
+                  strokeWeight: 2
+                }}
+                title="Tu ubicación"
+              />
+            )}
 
-        {/* Captain marker */}
-        {captainLocation && (
-          <CaptainMarker
-            position={captainLocation}
-            heading={captainLocation.heading}
-            speed={captainLocation.speed}
-            vehicleType={vehicleType}
-            isMoving={captainLocation.speed > 0}
-          />
-        )}
+            {/* Captain marker */}
+            {captainLocation && (
+              <CaptainMarker
+                position={captainLocation}
+                heading={captainLocation.heading}
+                speed={captainLocation.speed}
+                vehicleType={vehicleType}
+                isMoving={captainLocation.speed > 0}
+              />
+            )}
 
-        {/* Route polyline */}
-        {route && route.length > 0 && (
-          <RoutePolyline
-            path={route}
-            phase={currentPhase}
-            animate={true}
-          />
+            {/* Route polyline */}
+            {route && route.length > 0 && (
+              <RoutePolyline
+                path={route}
+                phase={currentPhase}
+                animate={true}
+              />
+            )}
+          </>
         )}
       </MapContainer>
 
