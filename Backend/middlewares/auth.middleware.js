@@ -32,7 +32,8 @@ module.exports.authUser = async (req, res, next) => {
       phone: user.phone,
       rides: user.rides,
       socketId: user.socketId,
-      emailVerified: user.emailVerified || false,
+      googleId: user.googleId,
+      profilePicture: user.profilePicture,
     };
     req.userType = "user";
 
@@ -76,7 +77,11 @@ module.exports.authCaptain = async (req, res, next) => {
       phone: captain.phone,
       rides: captain.rides,
       socketId: captain.socketId,
-      emailVerified: captain.emailVerified,
+      googleId: captain.googleId,
+      profilePicture: captain.profilePicture,
+      subscriptionStatus: captain.subscriptionStatus,
+      subscriptionExpiryDate: captain.subscriptionExpiryDate,
+      subscriptionStartDate: captain.subscriptionStartDate,
       vehicle: captain.vehicle,
       status: captain.status,
     };
