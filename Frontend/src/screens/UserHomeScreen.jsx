@@ -8,10 +8,12 @@ import {
   RideDetails,
   Sidebar,
 } from "../components";
+import { LiveTrackingMap } from "../components/Map";
 import axios from "axios";
 import debounce from "lodash.debounce";
 import { SocketDataContext } from "../contexts/SocketContext";
 import Console from "../utils/console";
+import useRideTracking from "../hooks/useRideTracking";
 
 function UserHomeScreen() {
   const token = localStorage.getItem("token"); // this token is in use
@@ -37,6 +39,22 @@ function UserHomeScreen() {
   });
   const [confirmedRideData, setConfirmedRideData] = useState(null);
   const rideTimeout = useRef(null);
+
+  // Tracking state
+  const [showMap, setShowMap] = useState(false);
+  const [userMapLocation, setUserMapLocation] = useState(null);
+  
+  // Initialize ride tracking hook
+  const {
+    captainLocation,
+    route,
+    pickupETA,
+    currentPhase,
+    startTracking,
+    stopTracking,
+    setUserLocation,
+    setCurrentPhase
+  } = useRideTracking(confirmedRideData?._id);
 
   // Panels
   const [showFindTripPanel, setShowFindTripPanel] = useState(true);
@@ -206,6 +224,12 @@ function UserHomeScreen() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          const coords = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          setUserMapLocation(coords);
+          setUserLocation(coords);
           setMapLocation(
             `https://www.google.com/maps?q=${position.coords.latitude},${position.coords.longitude}&output=embed`
           );
@@ -254,6 +278,18 @@ function UserHomeScreen() {
         `https://www.google.com/maps?q=${data.captain.location.coordinates[1]},${data.captain.location.coordinates[0]} to ${pickupLocation}&output=embed`
       );
       setConfirmedRideData(data);
+      setShowMap(true);
+      
+      // Start tracking when ride is confirmed
+      const captainLoc = {
+        latitude: data.captain.location.coordinates[1],
+        longitude: data.captain.location.coordinates[0]
+      };
+      startTracking({
+        captainLocation: captainLoc,
+        userLocation: userMapLocation,
+        currentPhase: 'captain-arriving'
+      });
     });
 
     socket.on("ride-started", (data) => {
@@ -261,6 +297,7 @@ function UserHomeScreen() {
       setMapLocation(
         `https://www.google.com/maps?q=${data.pickup} to ${data.destination}&output=embed`
       );
+      setCurrentPhase('in-progress');
     });
 
     socket.on("ride-ended", (data) => {
@@ -269,6 +306,8 @@ function UserHomeScreen() {
       setShowSelectVehiclePanel(false);
       setShowFindTripPanel(true);
       setDefaults();
+      setShowMap(false);
+      stopTracking();
       localStorage.removeItem("rideDetails");
       localStorage.removeItem("panelDetails");
 
@@ -359,13 +398,32 @@ function UserHomeScreen() {
       style={{ backgroundImage: `url(${map})` }}
     >
       <Sidebar />
-      <iframe
-        src={mapLocation}
-        className="absolute map w-full h-[120vh]"
-        allowFullScreen={true}
-        loading="lazy"
-        referrerPolicy="no-referrer-when-downgrade"
-      ></iframe>
+      
+      {/* Conditionally render map or tracking map */}
+      {showMap && confirmedRideData ? (
+        <div className="absolute w-full h-[120vh]">
+          <LiveTrackingMap
+            rideId={confirmedRideData._id}
+            userLocation={userMapLocation}
+            captainLocation={captainLocation}
+            route={route}
+            pickupETA={pickupETA}
+            currentPhase={currentPhase}
+            vehicleType={confirmedRideData.captain?.vehicle?.type || selectedVehicle}
+          />
+        </div>
+      ) : (
+        mapLocation && (
+          <iframe
+            src={mapLocation}
+            className="absolute map w-full h-[120vh]"
+            allowFullScreen={true}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          ></iframe>
+        )
+      )}
+      
       {/* Find a trip component */}
       {showFindTripPanel && (
         <div className="absolute b-0 flex flex-col justify-start p-4 pb-2 gap-4 rounded-b-lg bg-white h-fit w-full">

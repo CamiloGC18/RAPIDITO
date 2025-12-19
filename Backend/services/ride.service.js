@@ -74,7 +74,7 @@ module.exports.createRide = async ({
   try {
     const { fare, distanceTime } = await getFare(pickup, destination);
 
-    const ride = rideModel.create({
+    const ride = await rideModel.create({
       user,
       pickup,
       destination,
@@ -83,6 +83,11 @@ module.exports.createRide = async ({
       vehicle: vehicleType,
       distance: distanceTime.distance.value,
       duration: distanceTime.duration.value,
+      tracking: {
+        currentPhase: 'awaiting-captain',
+        route: [],
+        actualRoute: []
+      }
     });
 
     return ride;
