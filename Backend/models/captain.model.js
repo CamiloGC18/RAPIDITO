@@ -104,6 +104,9 @@ const captainSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Create geospatial index for location queries
+captainSchema.index({ location: '2dsphere' });
+
 // Updated to include subscriptionStatus in JWT payload
 captainSchema.methods.generateAuthToken = function () {
   return jwt.sign(

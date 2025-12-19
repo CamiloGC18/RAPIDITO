@@ -67,8 +67,40 @@ const rideSchema = new mongoose.Schema(
         _id: false
       },
     ],
+    tracking: {
+      route: [{
+        latitude: Number,
+        longitude: Number,
+        timestamp: Date,
+        speed: Number,
+        heading: Number
+      }],
+      pickupETA: Number, // minutes
+      dropoffETA: Number, // minutes
+      currentPhase: {
+        type: String,
+        enum: ['awaiting-captain', 'captain-arriving', 'in-progress', 'completed'],
+        default: 'awaiting-captain'
+      },
+      actualRoute: [{ // Ruta real tomada
+        latitude: Number,
+        longitude: Number,
+        timestamp: Date
+      }],
+      totalDistance: Number, // meters
+      totalDuration: Number, // seconds
+      lastLocationUpdate: Date
+    },
+    realTimeUpdates: [{
+      type: String, // 'location', 'eta', 'status'
+      data: mongoose.Schema.Types.Mixed,
+      timestamp: Date
+    }]
   },
   { timestamps: true }
 );
+
+// Create geospatial index for tracking
+rideSchema.index({ 'tracking.route': '2dsphere' });
 
 module.exports = mongoose.model("Ride", rideSchema);

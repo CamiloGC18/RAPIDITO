@@ -47,5 +47,24 @@ router.post('/end-ride',
     rideController.endRide
 )
 
+// New tracking endpoints
+router.get('/:rideId/tracking',
+    rideController.getRideTracking
+)
+
+router.get('/:rideId/route',
+    rideController.getRideRoute
+)
+
+router.get('/:rideId/captain-location',
+    rideController.getCaptainLocationForRide
+)
+
+router.patch('/:rideId/eta',
+    body('pickupETA').optional().isNumeric().withMessage('Invalid pickup ETA'),
+    body('dropoffETA').optional().isNumeric().withMessage('Invalid dropoff ETA'),
+    rideController.updateRideETA
+)
+
 
 module.exports = router;
